@@ -1,0 +1,11 @@
+node_modules
+dist
+.DS_Store
+.vite
+*.zip
+.env
+.env.local
+
+
+mapbox/.env
+mapbox/dist

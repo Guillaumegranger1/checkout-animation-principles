@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Map Embed</title>
+    
+    <!-- Performance: DNS prefetch and preconnect to Mapbox CDN -->
+    <link rel="dns-prefetch" href="https://api.mapbox.com" />
+    <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
+    <link rel="dns-prefetch" href="https://a.tiles.mapbox.com" />
+    <link rel="preconnect" href="https://a.tiles.mapbox.com" crossorigin />
+    <link rel="dns-prefetch" href="https://b.tiles.mapbox.com" />
+    <link rel="preconnect" href="https://b.tiles.mapbox.com" crossorigin />
+    
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.css" rel="stylesheet" />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #map { 
+        position: absolute; 
+        inset: 0; 
+        opacity: 0; /* Start invisible for smooth fade-in */
+        transition: opacity 600ms ease-out; /* Smooth fade-in transition */
+        cursor: default; /* Show default cursor instead of grab cursor */
+        pointer-events: none; /* Disable all pointer interactions for better performance */
+      }
+      #map.fade-in { opacity: 1; } /* Visible state */
+      /* Hide Mapbox attribution/logo */
+      .mapboxgl-ctrl-attrib,
+      .mapboxgl-ctrl-logo { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div id="map" role="img" aria-label="Map"></div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.js"></script>
+    <script>
+      // Token must be injected at build time or set via window.MAPBOX_TOKEN before this script runs.
+      // For local dev, set VITE_MAPBOX_TOKEN in your .env file.
+      const MAPBOX_TOKEN = window.MAPBOX_TOKEN ?? '';
+
+      const DELIVERY_LOCATION = [-75.696761, 45.418973];
+      function getParam(name) { return new URLSearchParams(location.search).get(name) }
+      const reduceMotion = getParam('rm') === '1'
+      const fasterCamera = getParam('fast') === '1'
+      const styleParam = getParam('style') || 'day' // Can be preset|theme combo, or full style URL
+      
+      // Parse style parameter - format: "preset" or "preset|theme" or full URL
+      let lightPreset = 'day'
+      let theme = 'default'
+      let mapStyle = 'mapbox://styles/mapbox/standard'
+      let isStandardStyle = true
+      
+      if (styleParam.startsWith('mapbox://')) {
+        // Full style URL provided
+        mapStyle = styleParam
+        isStandardStyle = styleParam.includes('/standard')
+      } else {
+        // Light preset with optional theme: "day", "day|faded", "dusk|monochrome", etc.
+        const parts = styleParam.split('|')
+        lightPreset = parts[0] || 'day'
+        theme = parts[1] || 'default'
+      }
+      
+      // Remove console logs in production for tiny perf boost
+      // console.log('[Map] Style params:', { styleParam, lightPreset, theme, mapStyle, isStandardStyle })
+      
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+
+      const map = new mapboxgl.Map({
+        container: 'map',
+        center: DELIVERY_LOCATION,
+        // If reduced motion, start at final camera to avoid intermediate frames
+        // Otherwise start at midpoint (50% through animation) to halve rendering workload
+        zoom: reduceMotion ? 15.5 : 14.25, // Midpoint between 13 and 15.5
+        pitch: reduceMotion ? 65 : 22.5, // Midpoint between -20 and 65
+        bearing: reduceMotion ? 12 : 6, // Midpoint between 0 and 12
+        style: mapStyle,
+        antialias: true,
+        attributionControl: false,
+        // Performance optimizations
+        optimizeForTerrain: true,
+        fadeDuration: 0, // Remove fade-in for instant tile loading
+        refreshExpiredTiles: false, // Don't auto-refresh, improves initial load
+        preserveDrawingBuffer: false, // Don't preserve buffer, better memory usage
+        trackResize: false, // Static size, no need to track resize
+        renderWorldCopies: false, // Don't render world copies at low zoom
+        maxTileCacheSize: 50, // Reduce tile cache for lower memory footprint
+        // Disable all interactivity for better performance and cleaner UX
+        interactive: false, // Disables all mouse/touch interactions
+        dragPan: false,
+        dragRotate: false,
+        scrollZoom: false,
+        boxZoom: false,
+        doubleClickZoom: false,
+        touchZoomRotate: false,
+        touchPitch: false,
+        keyboard: false
+      });
+
+      function hideHighwayNumbers() {
+        try {
+          const layers = (map.getStyle() && map.getStyle().layers) || [];
+          for (const layer of layers) {
+            if (layer.type !== 'symbol') continue;
+            // Strong match by layer id first (Standard style often uses ...shield... ids)
+            const id = String(layer.id || '');
+            if (/shield|road-number|route-shield|motorway-number|trunk-number|primary-number/i.test(id)) {
+              try { map.setLayoutProperty(id, 'visibility', 'none'); } catch {}
+              continue;
+            }
+            // Read current layout props (some are expressions)
+            let icon = null, text = null;
+            try { icon = map.getLayoutProperty(layer.id, 'icon-image'); } catch {}
+            try { text = map.getLayoutProperty(layer.id, 'text-field'); } catch {}
+            const iconStr = JSON.stringify(icon || '');
+            const textStr = JSON.stringify(text || '');
+            const mentionsShield = /shield|road.*number|motorway.*number|highway.*shield|route.*shield/i.test(iconStr);
+            const mentionsRef = /"ref"|\{ref\}/i.test(textStr);
+            if (mentionsShield || mentionsRef) {
+              // Hide entire symbol layer if it renders shields or ref text
+              try { map.setLayoutProperty(layer.id, 'visibility', 'none'); } catch {}
+            } 
+          }
+        } catch {}
+      }
+
+      function onStyleLoaded() {
+        // console.log('[Map] Style loaded, applying config...')
+        // Only apply configuration if using Standard-based style
+        if (isStandardStyle) {
+          try {
+            map.setConfigProperty('basemap', 'lightPreset', lightPreset);
+            // console.log('[Map] Set lightPreset:', lightPreset)
+          } catch (e) { console.error('[Map] Error setting lightPreset:', e) }
+          
+          try {
+            map.setConfigProperty('basemap', 'theme', theme);
+            // console.log('[Map] Set theme:', theme)
+          } catch (e) { console.error('[Map] Error setting theme:', e) }
+          
+          map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
+          map.setConfigProperty('basemap', 'showTransitLabels', false);
+          map.setConfigProperty('basemap', 'showRoadLabels', false); // hide road labels
+          map.setConfigProperty('basemap', 'show3dObjects', true); // enable 3D
+          // Prefer official Standard style toggle to hide road shields (highway numbers)
+          try { map.setConfigProperty('basemap', 'showRoadShields', false); } catch (e) {}
+        }
+
+        // Fallback/override: aggressively remove shields and ref text (works for all styles)
+        hideHighwayNumbers();
+        // Re-apply if style data updates (zoom-dependent mutations)
+        map.on('styledata', hideHighwayNumbers);
+      }
+      map.on('style.load', onStyleLoaded);
+
+      map.on('load', () => {
+        map.resize();
+        
+        // Wait for map to be fully rendered (tiles loaded, 3D buildings ready) before animating
+        // This prevents laggy animation when tiles are still loading
+        const startAnimation = () => {
+          // Trigger fade-in by adding class
+          document.getElementById('map').classList.add('fade-in');
+          
+          if (reduceMotion) {
+            // Jump directly to final 3D view; no camera motion
+            map.jumpTo({ center: DELIVERY_LOCATION, pitch: 65, zoom: 15.5, bearing: 12 });
+          } else {
+            // Subtle cinematic tilt-in to emphasize 3D
+            const cameraDuration = fasterCamera ? 750 : 1500; // 2x faster when enabled
+            map.easeTo({
+              center: DELIVERY_LOCATION,
+              pitch: 65,
+              zoom: 15.5,
+              bearing: 12,
+              duration: cameraDuration,
+              easing: (t) => 1 - Math.pow(1 - t, 3)
+            });
+            // Looping camera motion removed - map stays still after initial animation
+          }
+        };
+
+        // Use 'idle' event which fires when map is fully rendered (tiles loaded, no pending requests)
+        // This ensures smooth animation without lag from loading tiles
+        map.once('idle', () => {
+          // Small delay to ensure 3D buildings are fully rendered
+          setTimeout(startAnimation, 100);
+        });
+
+        // Notify parent when the map is fully idle (tiles/styles rendered)
+        let posted = false;
+        function notifyReady() {
+          if (posted) return;
+          posted = true;
+          try { window.parent && window.parent.postMessage({ type: 'map-ready' }, '*'); } catch {}
+        }
+        map.once('idle', notifyReady);
+        // Fallback: if idle is slow, still notify shortly after load
+        setTimeout(notifyReady, reduceMotion ? 400 : 1200);
+      });
+    </script>
+  </body>
+  </html>
+

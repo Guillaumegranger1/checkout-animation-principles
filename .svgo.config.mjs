@@ -1,0 +1,42 @@
+export default {
+  multipass: true,
+  js2svg: { pretty: false },
+  plugins: [
+    // Base optimizations
+    'cleanupAttrs',
+    'cleanupEnableBackground',
+    'cleanupIds',
+    'cleanupNumericValues',
+    'collapseGroups',
+    'convertPathData',
+    'convertShapeToPath',
+    'convertStyleToAttrs',
+    'convertTransform',
+    'inlineStyles',
+    'mergePaths',
+    'minifyStyles',
+    'removeComments',
+    'removeDesc',
+    'removeDimensions', // keep viewBox for responsiveness
+    { name: 'removeViewBox', active: false },
+    'removeDoctype',
+    'removeEditorsNSData',
+    'removeEmptyAttrs',
+    'removeEmptyContainers',
+    'removeEmptyText',
+    'removeHiddenElems',
+    'removeMetadata',
+    'removeNonInheritableGroupAttrs',
+    'removeOffCanvasPaths',
+    'removeRasterImages',
+    'removeTitle',
+    'removeUnknownsAndDefaults',
+    'removeUselessDefs',
+    'removeUselessStrokeAndFill',
+    'removeXMLProcInst',
+    'sortAttrs',
+    { name: 'convertColors', params: { currentColor: false } },
+  ],
+}
+
+
