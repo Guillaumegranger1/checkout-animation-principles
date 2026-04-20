@@ -266,13 +266,16 @@ const startAnimation = (map: mapboxgl.Map) => {
 
     useEffect(() => {
       if (!mapContainer.current) return;
+      if (!MAPBOX_TOKEN) return; // no token — skip map creation silently
 
       const isClassicInit = mapStyle.startsWith('mapbox://') && !mapStyle.includes('/standard');
       const isAmplifiedInit = mapStyle.startsWith('amplified');
       const isZoomInInit = mapStyle.includes('zoomin');
       loadedStyleUrl.current = finalMapStyle;
 
-      const map = new mapboxgl.Map({
+      let map: mapboxgl.Map;
+      try {
+      map = new mapboxgl.Map({
         container: mapContainer.current,
         center: effectiveCenter,
         zoom: isZoomInInit    ? (reduceMotion ? 14.75 : 15.5)
@@ -367,9 +370,13 @@ const startAnimation = (map: mapboxgl.Map) => {
       });
 
       mapInstance.current = map;
+      } catch (err) {
+        console.warn('MapView: map initialization failed', err);
+        return;
+      }
 
       return () => {
-        map.remove();
+        mapInstance.current?.remove();
       };
     }, []); // Only mount once
 

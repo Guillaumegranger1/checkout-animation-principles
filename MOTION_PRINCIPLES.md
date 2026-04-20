@@ -245,8 +245,8 @@ Spring physics are used for interactions that benefit from physical realism (she
 | Use case | Mass | Stiffness | Damping | Approx. duration |
 |----------|------|-----------|---------|-----------------|
 | Sheet open | 1 | 302 | 26 | ~350ms |
-| Radio/checkbox dot | — | — | — | 280ms `cubic-bezier(0.34, 1.56, 0.64, 1)` |
-| Press release (cards) | — | — | — | 300ms `cubic-bezier(0.34, 1.2, 0.64, 1)` |
+| Radio/checkbox dot | — | 500 | 30 | 280ms `cubic-bezier(0.34, 1.56, 0.64, 1)` |
+| Press release (cards) | — | 400 | 25 | 300ms `cubic-bezier(0.34, 1.2, 0.64, 1)` |
 
 > `cubic-bezier(0.34, 1.56, 0.64, 1)` is the CSS approximation of a high-stiffness spring (stiffness ≈500, damping ≈30). It produces a ~7% overshoot and settles in ~280ms.
 

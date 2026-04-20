@@ -95,7 +95,7 @@ function CopyButton({ getText }: { getText: () => string }) {
                 )}
               </div>
               <div className="copy-tt-body">
-                <code>{text || '—'}</code>
+                <code>{text || '-'}</code>
               </div>
             </div>,
             document.body
@@ -170,6 +170,17 @@ type SettingsPanelProps = {
   isSheets?: boolean
   isPayNow?: boolean
   isSpinner?: boolean
+  isMicro?: boolean
+  microPressTransitions?: boolean
+  setMicroPressTransitions?: Dispatch<SetStateAction<boolean>>
+  microChoiceUnit?: 'px' | '%'
+  setMicroChoiceUnit?: Dispatch<SetStateAction<'px' | '%'>>
+  microChoiceGap?: number
+  setMicroChoiceGap?: Dispatch<SetStateAction<number>>
+  microCheckmark?: 'spring' | 'draw'
+  setMicroCheckmark?: Dispatch<SetStateAction<'spring' | 'draw'>>
+  microScreenWidth?: number
+  setMicroScreenWidth?: Dispatch<SetStateAction<number>>
   expandMs: number
   setExpandMs: Dispatch<SetStateAction<number>>
   expandCubic: Cubic
@@ -829,7 +840,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                   aria-label="Reduce motion"
                 />
                 Reduce motion
-                <InfoTooltip text="“Reduce Motion” is a phone accessibility setting. When enabled, it minimizes motion-heavy transitions, replacing sliding animations with simpler fade effects to create a calmer visual experience." />
+                <InfoTooltip text={'\u201cReduce Motion\u201d is a phone accessibility setting. When enabled, it minimizes motion-heavy transitions, replacing sliding animations with simpler fade effects to create a calmer visual experience.'} />
               </label>
               <label className="settings-subheading" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 4px' }}>
                 <input
@@ -888,7 +899,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 />
                 Digital product
               </label>
-              {/* BOPIS toggle — hidden when Digital product is on */}
+              {/* BOPIS toggle - hidden when Digital product is on */}
               {!(props as any).digitalProduct && (
               <label className="settings-subheading" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 4px' }}>
                 <input
@@ -962,7 +973,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                       <option value="amplified-zoomin|day">Day (Zoom in)</option>
                       <option value="amplified-zoomin|night">Night (Zoom in)</option>
                     </optgroup>
-                    <optgroup label="Standard 3D — Default Theme">
+                    <optgroup label="Standard 3D - Default Theme">
                       <option value="day|default">Day</option>
                       <option value="dawn|default">Dawn</option>
                       <option value="dusk|default">Dusk</option>
@@ -974,7 +985,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                       <option value="dusk||flat">Dusk (Flat)</option>
                       <option value="night||flat">Night (Flat)</option>
                     </optgroup>
-                    <optgroup label="Standard 3D — Monochrome Theme">
+                    <optgroup label="Standard 3D - Monochrome Theme">
                       <option value="dawn|monochrome">Dawn (Monochrome)</option>
                       <option value="dusk|monochrome">Dusk (Monochrome)</option>
                     </optgroup>
@@ -992,7 +1003,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 <div className="settings-subheading" style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '4px 0 4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>Map address override</span>
-                    {geocodeStatus === 'loading' && <span style={{ fontSize: 11, opacity: 0.5, marginLeft: 'auto' }}>…</span>}
+                    {geocodeStatus === 'loading' && <span style={{ fontSize: 11, opacity: 0.5, marginLeft: 'auto' }}>...</span>}
                     {geocodeStatus === 'error' && <span style={{ fontSize: 11, color: '#f66', marginLeft: 'auto' }}>Not found</span>}
                   </div>
                   <div style={{ position: 'relative', width: '100%' }}>
@@ -1443,6 +1454,86 @@ export function SettingsPanel(props: SettingsPanelProps) {
               </a>
             </div>
           </>
+        ) : props.isMicro ? (
+          <>
+            <div className="panel-actions" style={{ justifyContent: 'space-between' }}>
+              <button className="btn-chip" type="button" onClick={openPrinciple}>Principle</button>
+              <button className="btn-chip" type="button" onClick={onReset}>Reset</button>
+            </div>
+            {/* Press transitions - inline with label */}
+            <div className="settings-block">
+              <div className="settings-heading-row">
+                <div className="settings-heading">Press transitions</div>
+                <div className="mode-toggle" style={{ ['--mt-index' as any]: props.microPressTransitions ? 0 : 1, ['--mt-w' as any]: '28px', ['--mt-gap' as any]: '6px' }}>
+                  <span className="mt-slider" aria-hidden />
+                  <button type="button" style={{ width: 30 }} className={`mt-btn${props.microPressTransitions ? ' selected' : ''}`} onClick={() => props.setMicroPressTransitions?.(true)}>On</button>
+                  <button type="button" style={{ width: 30 }} className={`mt-btn${!props.microPressTransitions ? ' selected' : ''}`} onClick={() => props.setMicroPressTransitions?.(false)}>Off</button>
+                </div>
+              </div>
+            </div>
+            {/* Choice list elements — hidden when press transitions are off */}
+            {props.microPressTransitions && <div className="settings-block">
+              <div className="settings-heading-row">
+                <div className="settings-heading">Choice list elements</div>
+                <div className="mode-toggle" style={{ ['--mt-index' as any]: props.microChoiceUnit === '%' ? 0 : 1, ['--mt-w' as any]: '24px', ['--mt-gap' as any]: '6px' }}>
+                  <span className="mt-slider" aria-hidden />
+                  <button type="button" style={{ width: 26 }} className={`mt-btn${props.microChoiceUnit === '%' ? ' selected' : ''}`} onClick={() => props.setMicroChoiceUnit?.('%')}>%</button>
+                  <button type="button" style={{ width: 26 }} className={`mt-btn${props.microChoiceUnit === 'px' ? ' selected' : ''}`} onClick={() => props.setMicroChoiceUnit?.('px')}>px</button>
+                </div>
+              </div>
+              <div className="settings-range">
+                <input
+                  type="range"
+                  min={0}
+                  max={20}
+                  step={1}
+                  value={props.microChoiceGap ?? 4}
+                  onChange={e => props.setMicroChoiceGap?.(parseInt(e.target.value, 10))}
+                  aria-label="Choice list gap"
+                />
+                <div className="range-scale" style={{ justifyContent: 'space-between' }}>
+                  <span>0{props.microChoiceUnit ?? 'px'}</span>
+                  <span>{props.microChoiceGap ?? 4}{props.microChoiceUnit ?? 'px'}</span>
+                  <span>20{props.microChoiceUnit ?? 'px'}</span>
+                </div>
+              </div>
+            </div>}
+            {/* Checkmark animation */}
+            <div className="settings-block" style={{ borderTop: '1px solid #2a2a2a', borderBottom: '1px solid #2a2a2a', marginTop: 4, marginBottom: 4, paddingTop: 12, paddingBottom: 12 }}>
+              <div className="settings-heading-row">
+                <div className="settings-heading">Checkmark animation</div>
+                <div className="mode-toggle" style={{ ['--mt-index' as any]: props.microCheckmark === 'spring' ? 0 : 1 }}>
+                  <span className="mt-slider" aria-hidden />
+                  <button type="button" className={`mt-btn${props.microCheckmark === 'spring' ? ' selected' : ''}`} onClick={() => props.setMicroCheckmark?.('spring')} title="Spring">
+                    <img src="/images/Spring.svg" alt="Spring" width={18} height={18} />
+                  </button>
+                  <button type="button" className={`mt-btn${props.microCheckmark === 'draw' ? ' selected' : ''}`} onClick={() => props.setMicroCheckmark?.('draw')} title="Draw">
+                    <img src="/images/draw.svg" alt="Draw" width={18} height={18} style={{ filter: 'brightness(0) invert(1)', display: 'block' }} />
+                  </button>
+                </div>
+              </div>
+            </div>
+            {/* Screen width */}
+            <div className="settings-block">
+              <div className="settings-heading">Screen width</div>
+              <div className="settings-range">
+                <input
+                  type="range"
+                  min={393}
+                  max={700}
+                  step={1}
+                  value={props.microScreenWidth ?? 393}
+                  onChange={e => props.setMicroScreenWidth?.(parseInt(e.target.value, 10))}
+                  aria-label="Screen width"
+                />
+                <div className="range-scale" style={{ justifyContent: 'space-between' }}>
+                  <span>393px</span>
+                  <span>{props.microScreenWidth ?? 393}px</span>
+                  <span>700px</span>
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
         <div className="settings-block">
           <span className="muted">Coming soon</span>
@@ -1454,7 +1545,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <div className={`modal-card panel-modal ${principleOpen ? 'show' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <span className="settings-title">
-                {isRollups ? 'Rollups animation principle' : isToggles ? 'Toggle selection principle' : isSheets ? 'Sheet animation principle' : 'Principle'}
+                {isRollups ? 'Rollups animation principle' : isToggles ? 'Toggle selection principle' : isSheets ? 'Sheet animation principle' : props.isMicro ? 'Microinteractions principle' : 'Principle'}
               </span>
               <button className="icon-btn" aria-label="Close" onClick={closePrinciple}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -1466,30 +1557,39 @@ export function SettingsPanel(props: SettingsPanelProps) {
               {isRollups ? (
                 <>
                   <p>
-                    Rollups are a core part of the checkout experience, so their motion is practical, not expressive. Expansion uses an ease‑out curve for a smooth, deliberate reveal, while collapse uses a tighter ease‑out for a quick, clean close. Collapsing is slightly faster to keep the flow efficient.
+                    Rollups are a core part of the checkout experience, so their motion is practical, not expressive. Expansion uses an ease-out curve for a smooth, deliberate reveal, while collapse uses a tighter ease-out for a quick, clean close. Collapsing is slightly faster to keep the flow efficient.
                   </p>
                   <p>
-                    No bounce, no recoil, and no caret rotation—extra motion adds visual noise and can make frequent interactions feel annoying. Every movement is purposeful, supporting clarity and responsiveness without distraction.
+                    No bounce, no recoil, and no caret rotation-extra motion adds visual noise and can make frequent interactions feel annoying. Every movement is purposeful, supporting clarity and responsiveness without distraction.
                   </p>
                 </>
               ) : isToggles ? (
                 <p>
-                  Toggles should behave like real-world switches—quick, responsive, and grounded in physical plausibility.
+                  Toggles should behave like real-world switches-quick, responsive, and grounded in physical plausibility.
                   The motion should feel snappy and intentional. The animation should be short and fluid (typically
-                  150–250ms) to maintain responsiveness without feeling rushed. It avoids exaggerated easing or bounce
+                  150-250ms) to maintain responsiveness without feeling rushed. It avoids exaggerated easing or bounce
                   effects, which can introduce unnecessary playfulness and reduce clarity of state. When the content
                   updates below, it should synchronize precisely with the toggle's end state to reinforce clarity and
                   polish.
                 </p>
               ) : isSheets ? (
                 <p>
-                  Motion in Checkout exists to support understanding, not decoration. For small, frequent interactions like dropdowns, toggles, or hover states, animations should feel immediate and purposeful—quick enough to keep the interface responsive and free of distraction. In contrast, for larger surface transitions such as modals or overlaid sheets, motion can afford a touch more realism: gentle easing or a subtle bounce can reinforce natural physical behavior, making these movements feel intuitive and lifelike. Entry animations may carry this expressive quality to create a sense of arrival and context, while exit motions should remain clean and swift, minimizing visual noise and keeping focus on what comes next.
+                  Motion in Checkout exists to support understanding, not decoration. For small, frequent interactions like dropdowns, toggles, or hover states, animations should feel immediate and purposeful-quick enough to keep the interface responsive and free of distraction. In contrast, for larger surface transitions such as modals or overlaid sheets, motion can afford a touch more realism: gentle easing or a subtle bounce can reinforce natural physical behavior, making these movements feel intuitive and lifelike. Entry animations may carry this expressive quality to create a sense of arrival and context, while exit motions should remain clean and swift, minimizing visual noise and keeping focus on what comes next.
                 </p>
+              ) : props.isMicro ? (
+                <>
+                  <p>
+                    Microinteractions are the small moments that make an interface feel alive - a press state that yields under your finger, a radio button dot that springs into place, a checkbox that confirms your tap. Their role is purely functional: to close the feedback loop between user intent and system response, making the product feel responsive and under control. Each microinteraction exists to deliver feedback - not to be noticed.
+                  </p>
+                  <p>
+                    The most effective press states, selection animations, and state transitions are the ones users feel but never consciously see. Functional priority must always come before aesthetics: an animation that draws attention to itself has already failed its purpose. For Checkout, this means press states should resolve in under 100ms, selection feedback in under 300ms, and spring physics - high stiffness, well-damped - should give interactions a grounded, physical quality without veering into playfulness. The measure of a well-designed microinteraction is not whether users notice it, but whether they would notice its absence.
+                  </p>
+                </>
               ) : isPayNow ? (
                 <p>
-                  The “Pay now” transition marks a key emotional peak in the checkout journey, reflecting the{' '}
+                  The "Pay now" transition marks a key emotional peak in the checkout journey, reflecting the{' '}
                   <a href="https://www.nngroup.com/articles/peak-end-rule/" target="_blank" rel="noopener noreferrer">
-                    peak‑end rule
+                    peak-end rule
                     <svg
                       width="12"
                       height="12"
@@ -1504,7 +1604,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                       <path d="M15 10.9674C15 10.5532 14.6642 10.2174 14.25 10.2174C13.8358 10.2174 13.5 10.5532 13.5 10.9674V13.75C13.5 14.4404 12.9404 15 12.25 15H6.25C5.55964 15 5 14.4404 5 13.75L5 7.75C5 7.05964 5.55965 6.5 6.25 6.5L9.03261 6.5C9.44682 6.5 9.78261 6.16421 9.78261 5.75C9.78261 5.33579 9.44682 5 9.03261 5L6.25 5C4.73122 5 3.5 6.23122 3.5 7.75V13.75C3.5 15.2688 4.73122 16.5 6.25 16.5H12.25C13.7688 16.5 15 15.2688 15 13.75V10.9674Z" fill="currentColor"/>
                     </svg>
                   </a>{' '}
-                  in user experience. It should feel both expressive and rewarding—delivering immediate, clear feedback that confirms the purchase while adding a celebratory touch that builds trust and satisfaction. Beyond leaving a positive final impression, the animation should carry a distinct, opinionated style that makes subsequent checkouts instantly recognizable as part of the Shopify experience, strengthening brand familiarity and confidence with every purchase.
+                  in user experience. It should feel both expressive and rewarding-delivering immediate, clear feedback that confirms the purchase while adding a celebratory touch that builds trust and satisfaction. Beyond leaving a positive final impression, the animation should carry a distinct, opinionated style that makes subsequent checkouts instantly recognizable as part of the Shopify experience, strengthening brand familiarity and confidence with every purchase.
                 </p>
               ) : null}
             </div>
@@ -1531,7 +1631,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 <li><strong>P90:</strong> ~1,200-1,500ms (for slower connections/devices)</li>
                 <li><strong>P99:</strong> ~2,000-2,500ms (worst case, poor connections)</li>
               </ul>
-              
+
               <p>
                 <strong>Connection Speed Breakdown</strong>
               </p>
@@ -1543,7 +1643,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 <li><strong>3G connections:</strong> ~1,000-1,500ms blank state</li>
                 <li><strong>Slow connections:</strong> 2,000ms+ blank state</li>
               </ul>
-              
+
               <p>
                 <strong>Critical Insight</strong>
               </p>

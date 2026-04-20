@@ -3503,15 +3503,16 @@ body {
   background: #3d3d3d;               /* match copy button */
   border: 1px solid #0e0e0e;          /* match */
   border-radius: 10px;                 /* match */
-  padding: 0;                          /* exact height match to copy button */
+  padding: 0 2px 0 0;                  /* 2px right to match slider's left: 2px inset */
   margin-left: auto;                   /* push to the right edge */
   margin-right: 12px;                  /* 12px spacing before Copy button */
   box-shadow: inset 0 0 0 2px #4a4a4a22; /* subtle inner ring */
   position: relative;                  /* anchor for slider */
 }
 .mt-btn {
-  width: 22px;                         /* resize component to 22px tall */
+  min-width: 22px;
   height: 22px;
+  padding: 0;
   display: grid;
   place-items: center;
   background: transparent;
@@ -3521,6 +3522,8 @@ body {
   cursor: pointer;
   position: relative;
   z-index: 1;                          /* above slider */
+  font-size: 12px;
+  white-space: nowrap;
 }
 .mt-btn.selected {
   background: transparent;             /* selection handled by slider */
@@ -3537,12 +3540,13 @@ body {
   position: absolute;
   top: 1px;
   left: 2px;
-  width: 20px;
+  /* --mt-w: width of each button (set on the .mode-toggle parent for text toggles) */
+  width: var(--mt-w, 20px);
   height: 20px;
   border-radius: 8px;
   background: #000;
   z-index: 0;
-  transform: translateX(calc(var(--mt-index, 0) * (22px + 3px)));
+  transform: translateX(calc(var(--mt-index, 0) * (var(--mt-w, 20px) + var(--mt-gap, 6px))));
   transition: transform 180ms cubic-bezier(0.2, 0.7, 0.1, 1);
   pointer-events: none;
 }
@@ -4783,3 +4787,245 @@ body.embed-mode .menu-list { display: none !important; }
 
 /* End state: skip the success-screen fade-in so content is instantly visible */
 .page.is-end-state .success-screen.show { transition: none !important; }
+
+/* ================================================================
+   Microinteractions view
+   ================================================================ */
+
+/* Choice list item (card) */
+.micro-choice-item {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  column-gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  /* Release spring */
+  transition: transform 300ms cubic-bezier(0.34, 1.2, 0.64, 1);
+  will-change: transform;
+}
+.micro-choice-item.micro-selected {
+  /* 2px inset shadow avoids layout shift */
+  box-shadow: inset 0 0 0 2px #000;
+}
+/* Press in — only when press transitions are enabled */
+.micro-choice-item.press-enabled:active {
+  transform: scale(var(--press-scale, 0.98));
+  transition: transform 80ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Radio indicator: 18×18px */
+.micro-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #e5e5e5;
+  background: #fff;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.micro-radio.micro-radio--selected {
+  background: #000;
+  border-color: #000;
+}
+/* Inner dot: 9×9px — always in DOM, animated in/out */
+.micro-radio::after {
+  content: "";
+  position: absolute;
+  inset: 4px; /* (18 - 2*4 = 10px approx 9px) */
+  border-radius: 50%;
+  background: #fff;
+  transform: scale(0);
+  opacity: 0;
+  /* Spring approximation: stiffness 500, damping 30 → ~7% overshoot */
+  transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity    150ms ease;
+}
+.micro-radio.micro-radio--selected::after {
+  transform: scale(1);
+  opacity: 1;
+}
+/* Hover: darken only the radio indicator border, not the card */
+.micro-choice-item:not(.micro-selected):hover .micro-radio {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+/* Draw mode: skip spring, use a simple fade */
+.micro-radio.micro-radio--draw::after {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+/* Badge for Microinteractions view */
+.micro-badge {
+  display: inline-block;
+  background: #000;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 2px 8px;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* Dark mode overrides */
+.page.dark-mode .micro-choice-item {
+  background: #1c1c1c;
+  border-color: rgba(255,255,255,0.12);
+}
+.page.dark-mode .micro-choice-item.micro-selected {
+  box-shadow: inset 0 0 0 2px #fff;
+}
+.page.dark-mode .micro-radio {
+  border-color: rgba(255,255,255,0.2);
+  background: #1c1c1c;
+}
+.page.dark-mode .micro-radio.micro-radio--selected {
+  background: #fff;
+  border-color: #fff;
+}
+.page.dark-mode .micro-radio::after {
+  background: #1c1c1c;
+}
+.page.dark-mode .micro-badge {
+  background: #fff;
+  color: #000;
+}
+
+/* ================================================================
+   Microinteractions — rollup summary section
+   (ported from checkout-accounts-playground/thank-you)
+   ================================================================ */
+
+.micro-section {
+  padding: 12px 14px;
+}
+.micro-section-divider {
+  border-top: 1px solid var(--color-border, #eaeaea);
+}
+.micro-section-subdued {
+  background: #f5f5f5;
+}
+.micro-section-header {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  column-gap: 12px;
+  align-items: start;
+}
+.micro-section-label {
+  color: #747474;
+  font-size: 14px;
+  line-height: 20px;
+}
+.micro-section-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 650;
+  color: #000;
+}
+.micro-section-sub {
+  font-size: 13px;
+  line-height: 18px;
+  color: #000;
+  margin-top: 2px;
+}
+.micro-section-main--payment {
+  justify-content: flex-start;
+  gap: 8px;
+}
+.micro-section-payment-chip {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Checkbox (microinteraction) ── */
+.cb-root {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  outline: none;
+}
+.cb-root:focus-visible .cb-box {
+  outline: 2px solid #5a31f4;
+  outline-offset: 2px;
+}
+.cb-box {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid var(--color-border, #eaeaea);
+  background: #fff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 300ms cubic-bezier(0.34, 1.2, 0.64, 1),
+              border-color 150ms ease;
+}
+.cb-root:hover .cb-box {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+.cb-root.press-enabled:active .cb-box {
+  transform: scale(0.88);
+  transition: transform 80ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.cb-check-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cb-root--checked:active .cb-check-wrap {
+  transform: scale(0.85);
+  transition: transform 80ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.cb-check {
+  width: 10px;
+  height: 9px;
+  color: #000;
+  animation: cb-check-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes cb-check-in {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.cb-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #000;
+  line-height: 20px;
+}
+
+/* ── Checkbox — draw mode (stroke trim animation) ── */
+.micro-checkmark-draw .cb-check {
+  animation: none; /* disable spring scale-in */
+}
+.micro-checkmark-draw .cb-check path {
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  animation: cb-check-draw 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+@keyframes cb-check-draw {
+  from { stroke-dashoffset: 14; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Microinteractions — phone shell expands with Screen width slider */
+.page.micro-view .phone-shell {
+  width: min(var(--micro-screen-w, 393px), calc(100vw - 100px));
+  transition: width 200ms cubic-bezier(0.30, 0.50, 0.50, 1.00);
+}

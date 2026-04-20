@@ -150,18 +150,19 @@ export function RollupsDemo() {
   const [expandMode, setExpandMode] = useState<'spring' | 'bezier'>('bezier')
   const [collapseMode, setCollapseMode] = useState<'spring' | 'bezier'>('bezier')
 
-  const [view, setView] = useState<'Rollups' | 'Sheets' | 'Pay now transition' | 'Toggles' | 'Spinner' | 'Tokens'>(() => {
+  const [view, setView] = useState<'Rollups' | 'Sheets' | 'Pay now transition' | 'Toggles' | 'Spinner' | 'Tokens' | 'Microinteractions'>(() => {
     try {
       const url = new URL(window.location.href)
       const q = (url.searchParams.get('demo') || '').toLowerCase()
       const h = (url.hash || '').replace('#', '').toLowerCase()
-      const map: Record<string, 'Rollups' | 'Sheets' | 'Pay now transition' | 'Toggles' | 'Spinner' | 'Tokens'> = {
+      const map: Record<string, 'Rollups' | 'Sheets' | 'Pay now transition' | 'Toggles' | 'Spinner' | 'Tokens' | 'Microinteractions'> = {
         rollups: 'Rollups',
         toggles: 'Toggles',
         sheets: 'Sheets',
         pay: 'Pay now transition',
         spinner: 'Spinner',
         tokens: 'Tokens',
+        micro: 'Microinteractions',
       }
       if (q && map[q]) return map[q]
       if (h && map[h]) return map[h]
@@ -223,7 +224,7 @@ export function RollupsDemo() {
   const collapseSpringEase = React.useMemo(() => generateSpringLinearPhysical(collapseSpring).easing, [collapseSpring])
   const toggleSpringEase = React.useMemo(() => generateSpringLinearPhysical(toggleSpring).easing, [toggleSpring])
 
-  const renderViewLabel = (v: 'Rollups' | 'Sheets' | 'Pay now transition' | 'Spinner' | 'Modals' | 'Toggles' | 'Radio buttons' | 'Tokens') => {
+  const renderViewLabel = (v: 'Rollups' | 'Sheets' | 'Pay now transition' | 'Spinner' | 'Modals' | 'Toggles' | 'Radio buttons' | 'Tokens' | 'Microinteractions') => {
     return v === 'Pay now transition'
       ? (<><em>Pay now</em>{'\u00A0'}transition</>)
       : v
@@ -458,6 +459,20 @@ export function RollupsDemo() {
   }, [])
 
   const [spinnerMs, setSpinnerMs] = useState<number>(350) // Spinner page speed
+
+  // Microinteractions controls
+  const [microPressTransitions, setMicroPressTransitions] = useState(true)
+  const [microChoiceUnit, setMicroChoiceUnit] = useState<'px' | '%'>('px')
+  const [microChoiceGap, setMicroChoiceGap] = useState(4)
+  const [microCheckmark, setMicroCheckmark] = useState<'spring' | 'draw'>('spring')
+  const [microScreenWidth, setMicroScreenWidth] = useState(393)
+  const [microSelectedMethod, setMicroSelectedMethod] = useState(0)
+  const [microSaveChecked, setMicroSaveChecked] = useState(false)
+  const [microSaveNext, setMicroSaveNext] = useState(false)
+  // Derived: press scale = (cardWidth - offsetPx) / cardWidth
+  const microPressScale = microChoiceUnit === 'px'
+    ? Math.max(0.9, (microScreenWidth - 48 - microChoiceGap) / (microScreenWidth - 48))
+    : Math.max(0.9, 1 - microChoiceGap / 100)
   const [spinnerMsPay, setSpinnerMsPay] = useState<number>(350) // Pay now speed
   const [spinnerEnabled, setSpinnerEnabled] = useState<boolean>(true)
   const [spinnerTrail, setSpinnerTrail] = useState<boolean>(false)
@@ -683,8 +698,9 @@ export function RollupsDemo() {
   return (
     <div
       key={`view-${view}`}
-      className={`page ${isEndState ? 'is-end-state' : ''} ${uiReady ? 'ui-ready' : ''} ${suppressBtnAnim ? 'no-btn-anim' : ''} ${showSuccess ? 'is-success' : ''} ${(!stgExitEnabled || reduceMotion) ? 'stg-exit-off' : ''} ${reduceMotion ? 'reduce-motion' : ''} ${guestCheckout ? 'shop-disabled' : 'shop-enabled'} ${digitalProduct ? 'digital-product' : ''} ${view === 'Tokens' ? 'tokens-view' : ''} ${darkMode ? 'dark-mode' : ''} ${bopis ? 'bopis' : ''} ${(mapStyle === 'mapbox://styles/mapbox/dark-v11' || mapStyle === 'amplified|night' || mapStyle === 'amplified-zoomin|night') ? 'map-classic-dark' : ''}`}
+      className={`page ${isEndState ? 'is-end-state' : ''} ${uiReady ? 'ui-ready' : ''} ${suppressBtnAnim ? 'no-btn-anim' : ''} ${showSuccess ? 'is-success' : ''} ${(!stgExitEnabled || reduceMotion) ? 'stg-exit-off' : ''} ${reduceMotion ? 'reduce-motion' : ''} ${guestCheckout ? 'shop-disabled' : 'shop-enabled'} ${digitalProduct ? 'digital-product' : ''} ${view === 'Tokens' ? 'tokens-view' : ''} ${view === 'Microinteractions' ? 'micro-view' : ''} ${darkMode ? 'dark-mode' : ''} ${bopis ? 'bopis' : ''} ${(mapStyle === 'mapbox://styles/mapbox/dark-v11' || mapStyle === 'amplified|night' || mapStyle === 'amplified-zoomin|night') ? 'map-classic-dark' : ''}`}
       style={{
+        ['--micro-screen-w' as any]: `${microScreenWidth}px`,
         ['--trail-offset-ms' as any]: `${spinnerTrailOffset}ms`,
         ['--stg-ms' as any]: `${stgMs}ms`,
         ['--stg-first' as any]: `${stgFirst}ms`,
@@ -1353,6 +1369,126 @@ export function RollupsDemo() {
                   </div>
                 </div>
               </div>
+            ) : view === 'Microinteractions' ? (
+              <div className="sheets" style={{ minHeight: 0 }}>
+                <div className="sheets-center" style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
+                  <div
+                    role="radiogroup"
+                    aria-label="Shipping method"
+                    style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}
+                  >
+                    {[
+                      { label: 'Standard', sub: '3–5 business days', price: 'Free', badge: '' },
+                      { label: 'Express', sub: '1–2 business days', price: '$12.00', badge: '' },
+                      { label: 'Next-day', sub: 'Tomorrow', price: '$24.00', badge: 'Fastest' },
+                    ].map((method, idx) => {
+                      const isSelected = microSelectedMethod === idx
+                      return (
+                        <div
+                          key={idx}
+                          className={`micro-choice-item${isSelected ? ' micro-selected' : ''}${microPressTransitions ? ' press-enabled' : ''}`}
+                          role="radio"
+                          aria-checked={isSelected}
+                          tabIndex={0}
+                          onClick={() => setMicroSelectedMethod(idx)}
+                          onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setMicroSelectedMethod(idx)}
+                          style={{ ['--press-scale' as any]: microPressScale }}
+                        >
+                          <div className={`micro-radio${isSelected ? ` micro-radio--selected micro-radio--${microCheckmark}` : ''}`} />
+                          <div className="col" style={{ gap: 2 }}>
+                            <div className="address-name">{method.label}</div>
+                            <div className="value-sub">{method.sub}</div>
+                          </div>
+                          <div className="col" style={{ gap: 4, alignItems: 'flex-end' }}>
+                            <div className="method-price">{method.price}</div>
+                            {method.badge ? <span className="micro-badge">{method.badge}</span> : null}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* Rollup summary + Save info — ported from checkout-accounts-playground/thank-you */}
+                  <div className="rollups-card" style={{ marginTop: 40 }}>
+                    <div className="micro-section">
+                      <div className="micro-section-header">
+                        <span className="micro-section-label">Ship to</span>
+                        <div>
+                          <div className="micro-section-main">Jordan Chen</div>
+                          <div className="micro-section-sub">151 O'Connor St, Ottawa, ON, K2P 2L8, CA</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="micro-section micro-section-divider">
+                      <div className="micro-section-header">
+                        <span className="micro-section-label">Method</span>
+                        <div>
+                          <div className="micro-section-main">FedEx Ground</div>
+                          <div className="micro-section-sub">1 to 2 weeks</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="micro-section micro-section-divider">
+                      <div className="micro-section-header">
+                        <span className="micro-section-label">Paid</span>
+                        <div>
+                          <div className="micro-section-main micro-section-main--payment">
+                            <span>Visa ···· 4242</span>
+                            <div className="micro-section-payment-chip">
+                              <svg viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg" role="img" width="33" height="21" aria-label="Visa">
+                                <path opacity=".07" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z"/>
+                                <path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/>
+                                <path d="M28.3 10.1H28c-.4 1-.7 1.5-1 3h1.9c-.3-1.5-.3-2.2-.6-3zm2.9 5.9h-1.7c-.1 0-.1 0-.2-.1l-.2-.9-.1-.2h-2.4c-.1 0-.2 0-.2.2l-.3.9c0 .1-.1.1-.1.1h-2.1l.2-.5L27 8.7c0-.5.3-.7.8-.7h1.5c.1 0 .2 0 .2.2l1.4 6.5c.1.4.2.7.2 1.1.1.1.1.1.1.2zm-13.4-.3l.4-1.8c.1 0 .2.1.2.1.7.3 1.4.5 2.1.4.2 0 .5-.1.7-.2.5-.2.5-.7.1-1.1-.2-.2-.5-.3-.8-.5-.4-.2-.8-.4-1.1-.7-1.2-1-.8-2.4-.1-3.1.6-.4.9-.8 1.7-.8 1.2 0 2.5 0 3.1.2h.1c-.1.6-.2 1.1-.4 1.7-.5-.2-1-.4-1.5-.4-.3 0-.6 0-.9.1-.2 0-.3.1-.4.2-.2.2-.2.5 0 .7l.5.4c.4.2.8.4 1.1.6.5.3 1 .8 1.1 1.4.2.9-.1 1.7-.9 2.3-.5.4-.7.6-1.4.6-1.4 0-2.5.1-3.4-.2-.1.2-.1.2-.2.1zm-3.5.3c.1-.7.1-.7.2-1 .5-2.2 1-4.5 1.4-6.7.1-.2.1-.3.3-.3H18c-.2 1.2-.4 2.1-.7 3.2-.3 1.5-.6 3-1 4.5 0 .2-.1.2-.3.2M5 8.2c0-.1.2-.2.3-.2h3.4c.5 0 .9.3 1 .8l.9 4.4c0 .1 0 .1.1.2 0-.1.1-.1.1-.1l2.1-5.1c-.1-.1 0-.2.1-.2h2.1c0 .1 0 .1-.1.2l-3.1 7.3c-.1.2-.1.3-.2.4-.1.1-.3 0-.5 0H9.7c-.1 0-.2 0-.2-.2L7.9 9.5c-.2-.2-.5-.5-.9-.6-.6-.3-1.7-.5-1.9-.5L5 8.2z" fill="#142688"/>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="micro-section micro-section-divider micro-section-subdued">
+                      <div
+                        className={`cb-root micro-checkmark-${microCheckmark}${microPressTransitions ? ' press-enabled' : ''}${microSaveChecked ? ' cb-root--checked' : ''}`}
+                        role="checkbox"
+                        aria-checked={microSaveChecked}
+                        tabIndex={0}
+                        onClick={() => setMicroSaveChecked(v => !v)}
+                        onKeyDown={e => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setMicroSaveChecked(v => !v))}
+                      >
+                        <div className="cb-box" aria-hidden>
+                          {microSaveChecked && (
+                            <span className="cb-check-wrap">
+                              <svg className="cb-check" viewBox="0 0 12 10" fill="none" aria-hidden>
+                                <path d="M1.5 5L4.5 8L10.5 1.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </span>
+                          )}
+                        </div>
+                        <span className="cb-label">Save my information for a faster checkout</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Standalone checkbox below */}
+                  <div
+                    className={`cb-root micro-checkmark-${microCheckmark}${microPressTransitions ? ' press-enabled' : ''}${microSaveNext ? ' cb-root--checked' : ''}`}
+                    role="checkbox"
+                    aria-checked={microSaveNext}
+                    tabIndex={0}
+                    onClick={() => setMicroSaveNext(v => !v)}
+                    onKeyDown={e => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setMicroSaveNext(v => !v))}
+                    style={{ marginTop: 40 }}
+                  >
+                    <div className="cb-box" aria-hidden>
+                      {microSaveNext && (
+                        <span className="cb-check-wrap">
+                          <svg className="cb-check" viewBox="0 0 12 10" fill="none" aria-hidden>
+                            <path d="M1.5 5L4.5 8L10.5 1.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                      )}
+                    </div>
+                    <span className="cb-label">Save information for next time</span>
+                  </div>
+                </div>
+              </div>
             ) : view === 'Pay now transition' ? (
               <div className="paynow-host" style={{ ['--spinner-ms' as any]: `${spinnerMsPay}ms` }}>
                 <OrderSummaryGuest
@@ -1489,6 +1625,7 @@ export function RollupsDemo() {
                     ) : null}
                   </div>
                 ) : null}
+                {(showOsSequence || showSuccess || isEndState) ? (
                 <div className={`success-screen ${showSuccess ? 'show' : ''} ${isMorphing ? 'morphing' : ''}`} aria-live="polite">
                   <header className="os-header">
                     <div className="os-header-spacer" />
@@ -1763,7 +1900,7 @@ export function RollupsDemo() {
                   </div>
                   </div>
                 </div>
-                
+                ) : null}
               </div>
             ) : (
               <div className="rollups-card" style={{ display: 'grid', placeItems: 'center', padding: 24 }}>
@@ -1882,7 +2019,7 @@ export function RollupsDemo() {
         </button>
             {menuOpen ? (
           <div className="dd-sheet" role="menu">
-            {(['Rollups', 'Toggles', 'Sheets', 'Pay now transition', 'Spinner', 'Tokens'] as const).map(label => (
+            {(['Rollups', 'Toggles', 'Sheets', 'Pay now transition', 'Spinner', 'Tokens', 'Microinteractions'] as const).map(label => (
               <button
                 key={label}
                 className="dd-item"
@@ -1890,7 +2027,7 @@ export function RollupsDemo() {
                   setView(label);
                   try {
                     const url = new URL(window.location.href)
-                    const map: Record<string, string> = { 'Rollups':'rollups','Toggles':'toggles','Sheets':'sheets','Pay now transition':'pay','Spinner':'spinner','Tokens':'tokens' }
+                    const map: Record<string, string> = { 'Rollups':'rollups','Toggles':'toggles','Sheets':'sheets','Pay now transition':'pay','Spinner':'spinner','Tokens':'tokens','Microinteractions':'micro' }
                     url.searchParams.set('demo', map[label] || 'rollups')
                     window.history.replaceState(null, '', url.toString())
                   } catch {}
@@ -1910,7 +2047,7 @@ export function RollupsDemo() {
           onClick={async () => {
             try {
               const url = new URL(window.location.href)
-              const map: Record<string, string> = { 'Rollups':'rollups','Toggles':'toggles','Sheets':'sheets','Pay now transition':'pay','Spinner':'spinner','Tokens':'tokens' }
+              const map: Record<string, string> = { 'Rollups':'rollups','Toggles':'toggles','Sheets':'sheets','Pay now transition':'pay','Spinner':'spinner','Tokens':'tokens','Microinteractions':'micro' }
               url.searchParams.set('demo', map[view] || 'rollups')
               await navigator.clipboard?.writeText(url.toString())
             } catch {}
@@ -1953,6 +2090,17 @@ export function RollupsDemo() {
         isSheets={view === 'Sheets'}
         isPayNow={view === 'Pay now transition'}
         isSpinner={view === 'Spinner'}
+        isMicro={view === 'Microinteractions'}
+        microPressTransitions={microPressTransitions}
+        setMicroPressTransitions={setMicroPressTransitions}
+        microChoiceUnit={microChoiceUnit}
+        setMicroChoiceUnit={setMicroChoiceUnit}
+        microChoiceGap={microChoiceGap}
+        setMicroChoiceGap={setMicroChoiceGap}
+        microCheckmark={microCheckmark}
+        setMicroCheckmark={setMicroCheckmark}
+        microScreenWidth={microScreenWidth}
+        setMicroScreenWidth={setMicroScreenWidth}
         expandMode={expandMode}
         setExpandMode={setExpandMode}
         collapseMode={collapseMode}
@@ -2112,6 +2260,12 @@ export function RollupsDemo() {
           setSpinnerEnabled(true)
           setDigitalProduct(false)
           setMapStyle(darkMode ? 'night|default' : 'day|default')
+          setMicroPressTransitions(true)
+          setMicroChoiceUnit('px')
+          setMicroChoiceGap(4)
+          setMicroCheckmark('spring')
+          setMicroScreenWidth(393)
+          setMicroSelectedMethod(0)
         }}
       />
       {/* Principles modal */}
@@ -2456,6 +2610,27 @@ new mapboxgl.Marker({ element: el, anchor: 'bottom' })
                   purchase while adding a celebratory touch that builds trust and satisfaction. Beyond leaving a positive final impression,
                   the animation should carry a distinct, opinionated style that makes subsequent checkouts instantly recognizable as part of
                   the Shopify experience, strengthening brand familiarity and confidence with every purchase.
+                </p>
+              </div>
+            </div>
+            {/* Microinteractions */}
+            <div className="principle-row">
+              <div className="viz-col">
+                <div className="viz-block">
+                  <div className="viz-title">Radio dot — Spring in</div>
+                  <BezierPreview x1={0.34} y1={1.56} x2={0.64} y2={1} />
+                </div>
+                <div className="viz-block">
+                  <div className="viz-title">Press release</div>
+                  <BezierPreview x1={0.34} y1={1.2} x2={0.64} y2={1} />
+                </div>
+              </div>
+              <div className="text-col">
+                <div className="pc-title">Microinteractions</div>
+                <p>
+                  Microinteractions are the small moments that make an interface feel alive — a press state that yields under your finger, a radio button dot that springs into place, a checkbox that confirms your tap. Their role is purely functional: to close the feedback loop between user intent and system response, making the product feel responsive and under control. Each microinteraction exists to deliver feedback — not to be noticed.
+                  <br /><br />
+                  The most effective press states, selection animations, and state transitions are the ones users feel but never consciously see. Functional priority must always come before aesthetics: an animation that draws attention to itself has already failed its purpose. For Checkout, this means press states should resolve in under 100ms, selection feedback in under 300ms, and spring physics — high stiffness, well-damped — should give interactions a grounded, physical quality without veering into playfulness. The measure of a well-designed microinteraction is not whether users notice it, but whether they would notice its absence.
                 </p>
               </div>
             </div>
