@@ -4708,3 +4708,78 @@ a.followup-btn { text-decoration: none; }
 .page.dark-mode.shop-disabled .sheet-pay-btn.leaving,
 .page.dark-mode.shop-disabled .sheet-pay-btn.guest.leaving { color: transparent; }
 
+
+/* ── End state init (?end=1) ─────────────────────────────────────────────── */
+
+/* Restore normal map cover delay (reduce-motion cuts it to 2ms, causing flash) */
+.page.is-end-state .success-map .map-cover.hide { transition-delay: 450ms; }
+
+/* Skip thumbnail fan animations — jump straight to final positions.
+   animation-delay:-999s fast-forwards past any duration; fill-mode:both
+   holds the 'to' keyframe, overriding the static opacity:0 on ghost-2/3. */
+.paynow-overlay.persist.instant .thumbs-ghost,
+.paynow-overlay.persist.instant .thumbs-ghost-2,
+.paynow-overlay.persist.instant .thumbs-ghost-3,
+.paynow-overlay.persist.instant .thumbs-ghost-4,
+.paynow-overlay.persist.instant .thumbs-ghost-5,
+.paynow-overlay.persist.instant .map-thumb-badge,
+.paynow-overlay.persist.instant .map-thumb-badge svg {
+  animation-delay:     -999s !important;
+  animation-fill-mode: both  !important;
+}
+
+/* Put overlay + followups directly in final position — no translateY gap,
+   no opacity stagger, no transition delays. */
+.page.is-end-state .success-overlay > :not(.envelope-stack) {
+  opacity:    1    !important;
+  transform:  none !important;
+  transition: none !important;
+}
+.page.is-end-state .success-followups > * {
+  opacity:    1    !important;
+  transform:  none !important;
+  filter:     none !important;
+  transition: none !important;
+}
+
+/* ── Embed mode ── */
+/* The iframe sits inside the case study's phone frame already.
+   Strip the demo's own phone shell and let the content fill the iframe. */
+body.embed-mode { overflow: hidden; background: #fff; margin: 0; }
+body.embed-mode .page {
+  display: block;
+  width: 100vw; height: 100vh;
+  background: #fff;
+}
+/* Make phone-shell fill the whole iframe */
+body.embed-mode .phone-shell {
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+body.embed-mode .phone-frame {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  height: 100% !important;
+}
+body.embed-mode .phone-content {
+  height: 100%;
+  padding: 0 !important;
+}
+/* Hide all chrome */
+body.embed-mode .top-dropdown,
+body.embed-mode .settings-panel,
+body.embed-mode .dd-sheet,
+body.embed-mode .principles-btn,
+body.embed-mode .share-btn,
+body.embed-mode .refresh-icon-btn,
+body.embed-mode .dev-hud,
+body.embed-mode .preview-link,
+body.embed-mode .embed-fake-cursor,
+body.embed-mode .status-bar,
+body.embed-mode .menu-list { display: none !important; }
+
+/* End state: skip the success-screen fade-in so content is instantly visible */
+.page.is-end-state .success-screen.show { transition: none !important; }

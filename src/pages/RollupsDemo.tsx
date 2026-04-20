@@ -12,6 +12,15 @@ import MapView, { type MapViewRef } from '../components/MapView'
 
 const BOPIS_CENTER: [number, number] = [-71.205325, 46.811881];
 
+const isEmbedMode = (() => {
+  try { return new URL(window.location.href).searchParams.get('embed') === '1' } catch { return false }
+})()
+if (isEmbedMode) document.body.classList.add('embed-mode')
+
+const isEndState = (() => {
+  try { return new URL(window.location.href).searchParams.get('end') === '1' } catch { return false }
+})()
+
 export function RollupsDemo() {
   // Linear() curve requested for the last two visuals
   const overshootLinearPoints: Array<[number, number]> = [
@@ -238,16 +247,17 @@ export function RollupsDemo() {
     }
   }, [view])
   const [restartKey, setRestartKey] = useState<number>(0)
-  const [showOsSequence, setShowOsSequence] = useState<boolean>(false)
+  const [showOsSequence, setShowOsSequence] = useState<boolean>(isEndState)
   const [isPaying, setIsPaying] = useState<boolean>(false)
-  const [isLeaving, setIsLeaving] = useState<boolean>(false)
+  const [isLeaving, setIsLeaving] = useState<boolean>(isEndState)
   const [overlayFade, setOverlayFade] = useState<boolean>(false)
-  const [showSuccess, setShowSuccess] = useState<boolean>(false)
+  const [showSuccess, setShowSuccess] = useState<boolean>(isEndState)
   const [mapReady, setMapReady] = useState<boolean>(false)
   const [isMorphing, setIsMorphing] = useState<boolean>(false)
   const mapRef = useRef<MapViewRef>(null)
+  const triggerPayRef = React.useRef<(() => void) | null>(null)
   const [isPreMorph, setIsPreMorph] = useState<boolean>(false)
-  const [persistThumbs, setPersistThumbs] = useState<boolean>(false)
+  const [persistThumbs, setPersistThumbs] = useState<boolean>(isEndState)
   // Track morph start to compute elapsed for mid-swap handoff
   // (Reverted mid-swap handoff state)
   const [osKey, setOsKey] = useState<number>(0)
@@ -412,6 +422,29 @@ export function RollupsDemo() {
     return () => window.removeEventListener('seq-status', handler as EventListener)
   }, [pauseMs, thumbMs, preMorphMs, reduceMotion])
   // Reset map readiness whenever we reload the embed
+
+  // Embed: fire EMBED_COMPLETE when success screen is fully loaded.
+  // Small delay lets the browser paint the content before the parent reveals the phone.
+  React.useEffect(() => {
+    if (!isEmbedMode || !persistThumbs) return
+    const t = setTimeout(() => window.parent.postMessage({ type: 'EMBED_COMPLETE' }, '*'), 300)
+    return () => clearTimeout(t)
+  }, [persistThumbs])
+
+  // Embed: EMBED_REPLAY resets to start state and auto-plays
+  React.useEffect(() => {
+    if (!isEmbedMode) return
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== 'EMBED_REPLAY') return
+      setShowSuccess(false); setIsLeaving(false); setIsPaying(false)
+      setPersistThumbs(false); setOverlayFade(false); setShowOsSequence(false)
+      setIsMorphing(false); setIsPreMorph(false)
+      setOsKey(k => k + 1)
+      setTimeout(() => triggerPayRef.current?.(), 200)
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
 
   // (Reverted handoff alignment logic)
 
@@ -650,7 +683,7 @@ export function RollupsDemo() {
   return (
     <div
       key={`view-${view}`}
-      className={`page ${uiReady ? 'ui-ready' : ''} ${suppressBtnAnim ? 'no-btn-anim' : ''} ${showSuccess ? 'is-success' : ''} ${(!stgExitEnabled || reduceMotion) ? 'stg-exit-off' : ''} ${reduceMotion ? 'reduce-motion' : ''} ${guestCheckout ? 'shop-disabled' : 'shop-enabled'} ${digitalProduct ? 'digital-product' : ''} ${view === 'Tokens' ? 'tokens-view' : ''} ${darkMode ? 'dark-mode' : ''} ${bopis ? 'bopis' : ''} ${(mapStyle === 'mapbox://styles/mapbox/dark-v11' || mapStyle === 'amplified|night' || mapStyle === 'amplified-zoomin|night') ? 'map-classic-dark' : ''}`}
+      className={`page ${isEndState ? 'is-end-state' : ''} ${uiReady ? 'ui-ready' : ''} ${suppressBtnAnim ? 'no-btn-anim' : ''} ${showSuccess ? 'is-success' : ''} ${(!stgExitEnabled || reduceMotion) ? 'stg-exit-off' : ''} ${reduceMotion ? 'reduce-motion' : ''} ${guestCheckout ? 'shop-disabled' : 'shop-enabled'} ${digitalProduct ? 'digital-product' : ''} ${view === 'Tokens' ? 'tokens-view' : ''} ${darkMode ? 'dark-mode' : ''} ${bopis ? 'bopis' : ''} ${(mapStyle === 'mapbox://styles/mapbox/dark-v11' || mapStyle === 'amplified|night' || mapStyle === 'amplified-zoomin|night') ? 'map-classic-dark' : ''}`}
       style={{
         ['--trail-offset-ms' as any]: `${spinnerTrailOffset}ms`,
         ['--stg-ms' as any]: `${stgMs}ms`,
@@ -1326,7 +1359,8 @@ export function RollupsDemo() {
                   key={osKey}
                   onPayNow={() => {
                     if (isPaying) return
-                    setIsPaying(true)
+                    const pay = () => {
+                      setIsPaying(true)
                     setTimeout(() => {
                       setIsLeaving(true)
                       let checkmarkDelay: number
@@ -1347,6 +1381,9 @@ export function RollupsDemo() {
                         setRestartKey(k => k + 1)
                       }, checkmarkDelay)
                     }, spinnerEnabled ? spinnerMsPay + 2000 : 0)
+                    }
+                    triggerPayRef.current = pay
+                    pay()
                   }}
                   isPaying={isPaying}
                   isLeaving={isLeaving}
@@ -1360,7 +1397,7 @@ export function RollupsDemo() {
                 />
                 {showOsSequence ? (
                   <div
-                    className={`paynow-overlay ${overlayFade ? 'fade-out' : ''} ${isPreMorph ? 'pre' : ''} ${isMorphing ? 'morphing' : ''} ${persistThumbs ? 'persist' : ''}`}
+                    className={`paynow-overlay ${overlayFade ? 'fade-out' : ''} ${isPreMorph ? 'pre' : ''} ${isMorphing ? 'morphing' : ''} ${persistThumbs ? 'persist' : ''} ${isEndState && persistThumbs ? 'instant' : ''}`}
                     aria-hidden
                     style={{
                       ['--morph-ease' as any]: thumbEasing as any,
