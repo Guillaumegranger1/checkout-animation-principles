@@ -69,7 +69,7 @@ export function OrderSummaryGuest({
       {!guestCheckout ? (
         <header className={`os-header ${restClass}`}>
           <div />
-          <div className="os-header-title">Plain Goods</div>
+          <img src="/images/atelier/logo.png" className="os-header-title os-header-logo" alt="Atelier" />
           <img src="/images/bag.svg" className="os-bag" width="20" height="20" aria-hidden alt="" />
         </header>
       ) : null}

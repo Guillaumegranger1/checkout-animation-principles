@@ -266,6 +266,9 @@ type SettingsPanelProps = {
   /** Pay now: Map style (light preset or full style URL) */
   mapStyle?: string
   setMapStyle?: Dispatch<SetStateAction<string>>
+  /** Pay now: Static map (skip camera animation) */
+  staticMap?: boolean
+  setStaticMap?: Dispatch<SetStateAction<boolean>>
   /** Pay now: callback when address is geocoded to coordinates */
   onMapCenterChange?: (center: [number, number] | undefined) => void
   /** Pay now: callback with short address label when geocoded (e.g. "11 W 53rd St") */
@@ -997,6 +1000,20 @@ export function SettingsPanel(props: SettingsPanelProps) {
                       <option value="mapbox://styles/mapbox/dark-v11">Dark</option>
                     </optgroup>
                   </select>
+                </div>
+              )}
+              {!(props as any).digitalProduct && (
+                <div className="settings-subheading" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 4px' }}>
+                  <span style={{ marginRight: 'auto' }}>Static map</span>
+                  <label className="pill-toggle">
+                    <input
+                      type="checkbox"
+                      checked={!!(props as any).staticMap}
+                      onChange={e => (props as any).setStaticMap?.(e.target.checked)}
+                      aria-label="Static map"
+                    />
+                    <span className="pill-toggle-track" />
+                  </label>
                 </div>
               )}
               {!(props as any).digitalProduct && (

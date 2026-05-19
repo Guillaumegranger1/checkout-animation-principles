@@ -29,6 +29,7 @@ mapboxgl.accessToken = MAPBOX_TOKEN;
 interface MapViewProps {
   reduceMotion: boolean;
   fasterCamera: boolean;
+  staticMap?: boolean;
   mapStyle: string;
   onReady: () => void;
   cameraOffset?: [number, number];
@@ -40,11 +41,14 @@ export interface MapViewRef {
 }
 
 const MapView = forwardRef<MapViewRef, MapViewProps>(
-  ({reduceMotion, fasterCamera, mapStyle, onReady, cameraOffset = [0, -30], center}, ref) => {
+  ({reduceMotion, fasterCamera, staticMap = false, mapStyle, onReady, cameraOffset = [0, -30], center}, ref) => {
     const effectiveCenter: [number, number] = center ?? DELIVERY_LOCATION;
     // Always-current ref so async callbacks (style.load, setTimeout, idle) never use a stale center
     const centerRef = useRef<[number, number]>(effectiveCenter);
     centerRef.current = effectiveCenter;
+    // Always-current ref for staticMap so async handlers (style.load, idle) never use a stale value
+    const staticMapRef = useRef(staticMap);
+    staticMapRef.current = staticMap;
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<mapboxgl.Map | null>(null);
 
@@ -236,10 +240,13 @@ const startAnimation = (map: mapboxgl.Map) => {
       const isClassicOrAmplified = (mapStyle.startsWith('mapbox://') && !mapStyle.includes('/standard') && !isCustomStd) || mapStyle.startsWith('amplified');
       const isAmplifiedAnim = mapStyle.startsWith('amplified');
       const isZoomIn = mapStyle.includes('zoomin');
-      const targetPitch = isAmplifiedAnim ? 35 : (isClassicOrAmplified ? 0 : 65);
+      // Static map: represent Mapbox Static Images API limits (max pitch 60°, no Standard style).
+      // Amplified end-state is 35° which is already within limits — keep it.
+      const targetPitch = isAmplifiedAnim ? 35 : (staticMap ? 60 : (isClassicOrAmplified ? 0 : 65));
+      const targetZoom = (staticMap && !isAmplifiedAnim) ? 16 : (isClassicOrAmplified ? 14.75 : 16);
 
-      if (reduceMotion) {
-        map.jumpTo({center: centerRef.current, pitch: targetPitch, zoom: isClassicOrAmplified ? 14.75 : 16, bearing: 12, offset: cameraOffset} as any);
+      if (reduceMotion || staticMap) {
+        map.jumpTo({center: centerRef.current, pitch: targetPitch, zoom: targetZoom, bearing: 12, offset: cameraOffset} as any);
       } else {
         const cameraDuration = fasterCamera ? 750 : 1500;
         if (isAmplifiedAnim) {
@@ -312,9 +319,10 @@ const startAnimation = (map: mapboxgl.Map) => {
         // avoids stale-closure issues since this handler lives inside useEffect([], []).
         const url = loadedStyleUrl.current;
         if (url === 'mapbox://styles/mapbox/streets-v12') {
-          enableClassic3dBuildings(map, '#ccc8c0');
+          // Skip 3D buildings in static map mode — Static Images API doesn't render them
+          if (!staticMapRef.current) enableClassic3dBuildings(map, '#ccc8c0');
         } else if (url === 'mapbox://styles/mapbox/dark-v11') {
-          enableClassic3dBuildings(map, '#4a4a52');
+          if (!staticMapRef.current) enableClassic3dBuildings(map, '#4a4a52');
         } else if (url === 'mapbox://styles/mapbox/standard') {
           // Apply Standard style config on initial mount — the mapStyle update effect
           // skips the first run, so we must handle it here.
@@ -523,7 +531,12 @@ const startAnimation = (map: mapboxgl.Map) => {
         const applyClassic = () => {
           hidePoiLabels(map);
           disableClassic3dBuildings(map);
-          map.easeTo({ pitch: 0, duration: 600 });
+          if (staticMapRef.current) {
+            // Static map: jump straight to the pitched final state (max 60° per Static Images API)
+            map.jumpTo({ pitch: 60, zoom: 16, bearing: 12, center: centerRef.current } as any);
+          } else {
+            map.easeTo({ pitch: 0, duration: 600 });
+          }
           fadeIn();
         };
 
@@ -574,11 +587,21 @@ const startAnimation = (map: mapboxgl.Map) => {
         const isClassicReset = mapStyle.startsWith('mapbox://') && !mapStyle.includes('/standard') && !isCustomStdReset;
         const isAmplifiedReset = mapStyle.startsWith('amplified');
         const isZoomInReset = mapStyle.includes('zoomin');
+        // For static/reduce-motion, jump directly to the final camera state
+        const resetPitch = reduceMotion
+          ? (isAmplifiedReset ? 35 : (isClassicReset ? 0 : 65))
+          : staticMap
+            ? (isAmplifiedReset ? 35 : 60)
+            : (isZoomInReset ? 72 : isAmplifiedReset ? 60 : 22.5);
+        const resetZoom = (reduceMotion || staticMap)
+          ? ((staticMap && !isAmplifiedReset) ? 16 : (isClassicReset ? 14.75 : 16))
+          : (isZoomInReset ? 15.5 : isAmplifiedReset ? 15.5 : 14.25);
+        const resetBearing = (reduceMotion || staticMap) ? 12 : (isZoomInReset ? 32 : 6);
         map.jumpTo({
           center: centerRef.current,
-          zoom: reduceMotion ? 14.75 : (isZoomInReset ? 15.5 : isAmplifiedReset ? 15.5 : 14.25),
-          pitch: reduceMotion ? (isAmplifiedReset ? 35 : (isClassicReset ? 0 : 65)) : (isZoomInReset ? 72 : isAmplifiedReset ? 60 : 22.5),
-          bearing: reduceMotion ? 12 : (isZoomInReset ? 32 : 6),
+          zoom: resetZoom,
+          pitch: resetPitch,
+          bearing: resetBearing,
           offset: cameraOffset,
         } as any);
 

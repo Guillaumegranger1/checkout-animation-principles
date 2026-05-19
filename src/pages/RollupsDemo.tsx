@@ -274,15 +274,44 @@ export function RollupsDemo() {
   const [thumbCubic, setThumbCubic] = useState<[number, number, number, number]>([0.51, 0.00, 0.72, 0.51])
   const [thumbEasingOverride, setThumbEasingOverride] = useState<string | undefined>(defaultThumbEasingOverride)
   const [reduceMotion, setReduceMotion] = useState<boolean>(false)
-  const [numberOfItems, setNumberOfItems] = useState<'1' | '2' | '3' | '4' | '5+'>('3')
+  const [numberOfItems, setNumberOfItems] = useState<'1' | '2' | '3' | '4' | '5+'>(() => {
+    try {
+      const v = new URL(window.location.href).searchParams.get('items')
+      if (v === '1' || v === '2' || v === '3' || v === '4' || v === '5+') return v
+    } catch {}
+    return '3'
+  })
+  const brand = (() => {
+    try { return new URL(window.location.href).searchParams.get('brand') || '' } catch { return '' }
+  })()
+  const atelierImages = [
+    '/images/atelier/product-1.png',
+    '/images/atelier/product-2.png',
+    '/images/atelier/product-3.png',
+  ]
+
   const [darkMode, setDarkMode] = useState<boolean>(false)
   const [guestCheckout, setGuestCheckout] = useState<boolean>(true)
   const [shopPercentile, setShopPercentile] = useState<'p50' | 'p90'>('p50')
   // Map can be either a light preset (for Standard style) or a full style URL
   const [mapStyle, setMapStyle] = useState<string>('day|default')
+  const [staticMap, setStaticMap] = useState<boolean>(false)
+  // Mapbox Static Images API doesn't support Standard or Standard-based custom styles.
+  // When static map is on, remap to the nearest classic equivalent.
+  const effectiveMapStyle = React.useMemo(() => {
+    if (!staticMap) return mapStyle
+    if (mapStyle.startsWith('amplified')) return mapStyle // streets-v12 / dark-v11 already
+    if (mapStyle.startsWith('mapbox://') && !mapStyle.includes('|')) return mapStyle // direct classic URL
+    const isNight = mapStyle.includes('night') || mapStyle.includes('dusk')
+    return isNight
+      ? 'mapbox://styles/mapbox/dark-v11'
+      : 'mapbox://styles/mapbox/streets-v12'
+  }, [staticMap, mapStyle])
   const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined)
   const [mapAddressLabel, setMapAddressLabel] = useState<string | undefined>(undefined)
-  const [bopis, setBopis] = useState<boolean>(false)
+  const [bopis, setBopis] = useState<boolean>(() => {
+    try { return new URL(window.location.href).searchParams.get('bopis') === '1' } catch { return false }
+  })
   React.useEffect(() => {
     setMapStyle(prev => {
       if (prev.startsWith('amplified')) {
@@ -305,7 +334,15 @@ export function RollupsDemo() {
     });
   }, [darkMode])
   // Digital product selection
-  const [selectedProduct, setSelectedProduct] = useState<'1-item' | '2-items' | '3-items' | '4-items' | '5-items' | 'shoe' | 'flute' | 'tire' | 'tennis'>('3-items')
+  const [selectedProduct, setSelectedProduct] = useState<'1-item' | '2-items' | '3-items' | '4-items' | '5-items' | 'shoe' | 'flute' | 'tire' | 'tennis'>(() => {
+    try {
+      const v = new URL(window.location.href).searchParams.get('items')
+      const map: Record<string, '1-item' | '2-items' | '3-items' | '4-items' | '5-items'> =
+        { '1': '1-item', '2': '2-items', '3': '3-items', '4': '4-items', '5': '5-items' }
+      if (v && map[v]) return map[v]
+    } catch {}
+    return '3-items'
+  })
   
   // Helper to get product images based on selection
   const getProductImages = () => {
@@ -319,13 +356,16 @@ export function RollupsDemo() {
         '5-items': 5
       }
       const count = itemCountMap[selectedProduct as keyof typeof itemCountMap]
-      const imageMap = [
+      const defaultImages = [
         '/images/image1.png',
         '/images/image2.png',
         '/images/image3.png',
         '/images/image4.png',
         '/images/image5.png'
       ]
+      const imageMap = brand === 'atelier'
+        ? [...atelierImages, ...defaultImages.slice(atelierImages.length)]
+        : defaultImages
       return {
         images: imageMap.slice(0, count),
         count: count,
@@ -351,13 +391,16 @@ export function RollupsDemo() {
   // Helper to get map thumbnail images and count based on numberOfItems
   const getMapThumbnails = () => {
     const itemCount = numberOfItems === '5+' ? 5 : parseInt(numberOfItems)
-    const imageMap = [
+    const defaultImages = [
       '/images/image1.png',
       '/images/image2.png',
       '/images/image3.png',
       '/images/image4.png',
       '/images/image5.png'
     ]
+    const imageMap = brand === 'atelier'
+      ? [...atelierImages, ...defaultImages.slice(atelierImages.length)]
+      : defaultImages
     return {
       images: imageMap.slice(0, itemCount),
       count: itemCount
@@ -584,11 +627,37 @@ export function RollupsDemo() {
   const [seqMode, setSeqMode] = useState<'js' | 'sprite' | 'apng' | 'css'>('css')
   const [devGuidesOpen, setDevGuidesOpen] = useState(false)
   // Digital product mode: replace map/thumbnail imagery
-  const [digitalProduct, setDigitalProduct] = useState<boolean>(false)
+  const [digitalProduct, setDigitalProduct] = useState<boolean>(() => {
+    try { return new URL(window.location.href).searchParams.get('digital') === '1' } catch { return false }
+  })
+
+  // Keep triggerPayRef pre-populated so EMBED_REPLAY can auto-play without
+  // requiring a prior manual click. Updated whenever relevant state changes.
+  React.useEffect(() => {
+    if (view !== 'Pay now transition') return
+    triggerPayRef.current = () => {
+      if (isPaying) return
+      setIsPaying(true)
+      setTimeout(() => {
+        setIsLeaving(true)
+        const checkmarkDelay = guestCheckout
+          ? 320
+          : (7 * stgStep) + stgMs + (shopPercentile === 'p50' ? 400 : 1350)
+        setTimeout(() => {
+          setShowOsSequence(true)
+          setRestartKey(k => k + 1)
+        }, checkmarkDelay)
+      }, spinnerEnabled ? spinnerMsPay + 2000 : 0)
+    }
+  }, [view, isPaying, guestCheckout, stgStep, stgMs, shopPercentile, spinnerEnabled, spinnerMsPay])
 
   const productImages = (() => {
     const base = getProductImages()
     if (!digitalProduct) return base
+    // Image type options (shoe, flute, tire, tennis) have their own specific
+    // product images — use them as-is. Only replace with gift.png for
+    // generic item-count options ('1-item', '2-items', etc.).
+    if (!selectedProduct.includes('-item')) return base
     const giftImages = Array.from({ length: base.count }, () => '/images/gift.png')
     return {
       ...base,
@@ -600,13 +669,16 @@ export function RollupsDemo() {
   // Get map thumbnails based on numberOfItems for non-digital products
   const mapThumbnails = digitalProduct ? productImages : (() => {
     const itemCount = numberOfItems === '5+' ? 5 : parseInt(numberOfItems)
-    const imageMap = [
+    const defaultImages = [
       '/images/image1.png',
       '/images/image2.png',
       '/images/image3.png',
       '/images/image4.png',
       '/images/image5.png'
     ]
+    const imageMap = brand === 'atelier'
+      ? [...atelierImages, ...defaultImages.slice(atelierImages.length)]
+      : defaultImages
     return {
       images: imageMap.slice(0, itemCount),
       count: itemCount
@@ -1629,7 +1701,7 @@ export function RollupsDemo() {
                 <div className={`success-screen ${showSuccess ? 'show' : ''} ${isMorphing ? 'morphing' : ''}`} aria-live="polite">
                   <header className="os-header">
                     <div className="os-header-spacer" />
-                    <div className="os-header-title">Plain Goods</div>
+                    <img src="/images/atelier/logo.png" className="os-header-title os-header-logo" alt="Atelier" />
                     <div className={`os-avatar${guestCheckout ? '' : ' os-avatar--shop-pay'}`} aria-hidden>J</div>
                   </header>
                   <div className="success-map">
@@ -1642,7 +1714,8 @@ export function RollupsDemo() {
                             ref={mapRef}
                             reduceMotion={reduceMotion}
                             fasterCamera={false}
-                            mapStyle={mapStyle}
+                            staticMap={staticMap}
+                            mapStyle={effectiveMapStyle}
                             onReady={() => setMapReady(true)}
                             cameraOffset={[numberOfItems === '2' && !bopis ? -20 : 0, -30]}
                             center={mapCenter ?? (bopis ? BOPIS_CENTER : undefined)}
@@ -1873,27 +1946,48 @@ export function RollupsDemo() {
                       </div>
                     ) : null}
                     {/* Similar products - end-state only (Pay now transition) */}
-                    <div className="recs-card" aria-label="Similar products for you">
-                      <div className="recs-title">Similar products for you</div>
+                    <div className="recs-card" aria-label="Continue shopping">
+                      <div className="recs-title">Continue shopping</div>
                       <div className="recs-list" role="list">
-                        <div className="recs-item" role="listitem">
-                          <div className="recs-img"><img src="/images/product_1.png" alt="" aria-hidden /></div>
-                          <div className="recs-name">Aceite de Moska</div>
-                          <div className="recs-meta">60 mL</div>
-                          <div className="recs-price">$64.00</div>
-                        </div>
-                        <div className="recs-item" role="listitem">
-                          <div className="recs-img"><img src="/images/product_2.png" alt="" aria-hidden /></div>
-                          <div className="recs-name">Guava Rescue</div>
-                          <div className="recs-meta">200 mL</div>
-                          <div className="recs-price">$27.00</div>
-                        </div>
-                        <div className="recs-item" role="listitem">
-                          <div className="recs-img"><img src="/images/product_3.png" alt="" aria-hidden /></div>
-                          <div className="recs-name">Scalp Masaje</div>
-                          <div className="recs-meta">2 options</div>
-                          <div className="recs-price">$31.00</div>
-                        </div>
+                        {brand === 'atelier' ? (<>
+                          <div className="recs-item" role="listitem">
+                            <div className="recs-img"><img src="/images/atelier/product-1.png" alt="" aria-hidden /></div>
+                            <div className="recs-name">Arc Tote</div>
+                            <div className="recs-meta">Grey / Cognac</div>
+                            <div className="recs-price">$285.00</div>
+                          </div>
+                          <div className="recs-item" role="listitem">
+                            <div className="recs-img"><img src="/images/atelier/product-2.png" alt="" aria-hidden /></div>
+                            <div className="recs-name">Block Mule</div>
+                            <div className="recs-meta">Tan</div>
+                            <div className="recs-price">$195.00</div>
+                          </div>
+                          <div className="recs-item" role="listitem">
+                            <div className="recs-img"><img src="/images/atelier/product-3.png" alt="" aria-hidden /></div>
+                            <div className="recs-name">Envelope Clutch</div>
+                            <div className="recs-meta">Nude</div>
+                            <div className="recs-price">$145.00</div>
+                          </div>
+                        </>) : (<>
+                          <div className="recs-item" role="listitem">
+                            <div className="recs-img"><img src="/images/product_1.png" alt="" aria-hidden /></div>
+                            <div className="recs-name">Aceite de Moska</div>
+                            <div className="recs-meta">60 mL</div>
+                            <div className="recs-price">$64.00</div>
+                          </div>
+                          <div className="recs-item" role="listitem">
+                            <div className="recs-img"><img src="/images/product_2.png" alt="" aria-hidden /></div>
+                            <div className="recs-name">Guava Rescue</div>
+                            <div className="recs-meta">200 mL</div>
+                            <div className="recs-price">$27.00</div>
+                          </div>
+                          <div className="recs-item" role="listitem">
+                            <div className="recs-img"><img src="/images/product_3.png" alt="" aria-hidden /></div>
+                            <div className="recs-name">Scalp Masaje</div>
+                            <div className="recs-meta">2 options</div>
+                            <div className="recs-price">$31.00</div>
+                          </div>
+                        </>)}
                       </div>
                       <div className="recs-terms">Terms and policies</div>
                     </div>
@@ -2200,6 +2294,8 @@ export function RollupsDemo() {
         setSelectedProduct={setSelectedProduct}
         mapStyle={mapStyle}
         setMapStyle={setMapStyle}
+        staticMap={staticMap}
+        setStaticMap={setStaticMap}
         onMapCenterChange={(c) => setMapCenter(c)}
         onMapAddressChange={(a) => setMapAddressLabel(a)}
         darkMode={darkMode}

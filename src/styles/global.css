@@ -535,6 +535,47 @@ body {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'><path d='M5 10l3 3 7-7' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
+/* iOS-style pill toggle */
+.pill-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.pill-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.pill-toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: #4a4a4a;
+  transition: background 180ms ease;
+  cursor: pointer;
+}
+.pill-toggle input:checked + .pill-toggle-track {
+  background: #5a31f4;
+}
+.pill-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 180ms ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.pill-toggle input:checked + .pill-toggle-track::after {
+  transform: translateX(16px);
+}
+
 /* Inline On/Off segmented toggle — mirrors mode-toggle */
 .inline-toggle {
   display: inline-flex;
@@ -1201,6 +1242,13 @@ body {
   font-weight: 600;
   font-size: 20px;
   color: #000;
+  margin: 0 0 20px;
+}
+.os-header-logo {
+  height: auto;
+  width: 145px;
+  display: block;
+  object-fit: contain;
   margin: 0 0 20px;                 /* spacing below without affecting vertical alignment */
 }
 .os-bag { width: 20px; height: 20px; display: block; object-fit: contain; align-self: baseline; }
@@ -4770,7 +4818,7 @@ body.embed-mode .phone-frame {
 }
 body.embed-mode .phone-content {
   height: 100%;
-  padding: 0 !important;
+  padding: 8px 20px 12px !important; /* restore side padding; strip only vertical excess */
 }
 /* Hide all chrome */
 body.embed-mode .top-dropdown,
